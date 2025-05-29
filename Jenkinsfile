@@ -16,7 +16,7 @@ pipeline {
 
         stage('Build WAR') {
             steps {
-                sh './build_petclinic.sh'
+                sh 'mvn clean package'
             }
         }
 
@@ -26,7 +26,7 @@ pipeline {
                     sh """
                         ssh -o StrictHostKeyChecking=no ${ANSIBLE_USER}@${ANSIBLE_HOST} \\
                         'cd /home/${ANSIBLE_USER}/ansible && \\
-                         ansible-playbook -i inventory.ini deploy_petclinic.yml'
+                         ansible-playbook -i inventory.ini deploy.yml'
                     """
                 }
             }
@@ -38,7 +38,7 @@ pipeline {
                     sh """
                         ssh -o StrictHostKeyChecking=no ${ANSIBLE_USER}@${ANSIBLE_HOST} \\
                         'cd /home/${ANSIBLE_USER}/petclinic-ansible && \\
-                         ansible-playbook -i inventory.ini sanity_check.yml'
+                         ansible-playbook -i inventory.ini sanity.yml'
                     """
                 }
             }
