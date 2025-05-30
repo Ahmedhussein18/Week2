@@ -16,13 +16,9 @@ pipeline {
 
         stage('Build WAR') {
             steps {
-                sshagent([env.SSH_KEY_ID]) {
-                    sh """
-                        ssh -o StrictHostKeyChecking=no ${ANSIBLE_USER}@${ANSIBLE_HOST} \\
-                        'cd /home/${ANSIBLE_USER}/ansible && \\
-                         ./jar-to-war.sh'
-                    """
-                }
+                 
+                    sh '/home/pet-clinic/ansible/jar-to-war.sh'
+                
             }
         }
 
