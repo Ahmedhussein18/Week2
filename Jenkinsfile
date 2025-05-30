@@ -39,7 +39,7 @@ pipeline {
                 sshagent([env.SSH_KEY_ID]) {
                     sh """
                         ssh -o StrictHostKeyChecking=no ${ANSIBLE_USER}@${ANSIBLE_HOST} \\
-                        'cd /home/${ANSIBLE_USER}/petclinic-ansible && \\
+                        'cd /home/${ANSIBLE_USER}/ansible && \\
                          ansible-playbook -i inventory.ini sanity.yml'
                     """
                 }
@@ -51,7 +51,7 @@ pipeline {
                 sshagent([env.SSH_KEY_ID]) {
                     sh """
                         ssh -o StrictHostKeyChecking=no ${ANSIBLE_USER}@${ANSIBLE_HOST} \\
-                        'cd /home/${ANSIBLE_USER}/petclinic-ansible && \\
+                        'cd /home/${ANSIBLE_USER}/ansible && \\
                          ansible-playbook -i inventory.ini nagios_monitoring.yml'
                     """
                 }
