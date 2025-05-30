@@ -17,7 +17,7 @@ pipeline {
         stage('Build WAR') {
             steps {
                  
-                    sh '/home/pet-clinic/ansible/jar-to-war.sh'
+                    sh '/home/pet-clinic/jar-to-war.sh'
                 
             }
         }
