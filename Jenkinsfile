@@ -13,7 +13,7 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/spring-projects/spring-petclinic.git'
             }
         }
-
+        
         stage('Build WAR') {
             steps {
                  
@@ -52,7 +52,7 @@ pipeline {
                     sh """
                         ssh -o StrictHostKeyChecking=no ${ANSIBLE_USER}@${ANSIBLE_HOST} \\
                         'cd /home/${ANSIBLE_USER}/ansible && \\
-                         ansible-playbook -i inventory.ini nagios_monitoring.yml'
+                         ansible-playbook -i inventory.ini nagios-playbook.yml'
                     """
                 }
             }
