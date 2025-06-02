@@ -1,0 +1,16 @@
+---
+- name: Sanity Check
+  hosts: petclinic
+  gather_facts: no
+
+
+  tasks:
+    - name: Check if petclinic is responding on port 9090
+      uri:
+        url: http://localhost:9090/spring-petclinic/
+        status_code: 200
+        return_content: no
+      register: http_check
+      retries: 3
+      delay: 5
+      until: http_check.status == 200

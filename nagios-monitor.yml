@@ -1,0 +1,49 @@
+---
+- name: Configure Nagios to monitor Tomcat
+  hosts: petclinic
+  become: yes
+
+
+
+  tasks:
+
+
+    - name: Ensure Nagios servers directory exists
+      file:
+        path: /usr/local/nagios/etc/servers
+        state: directory
+        mode: '0755'   
+   
+    - name: Create Nagios HTTP service config for Tomcat
+      copy:
+        dest: "/usr/local/nagios/etc/servers/tomcat_http.cfg"
+        mode: '0644'
+        content: |
+          define service{
+              use     generic-service
+              host_name   localhost
+              service_description   Tomcat HTTP
+              check_command   check_http!-p 9090
+              notifications_enabled   1
+        
+            }
+
+    - name: Create Nagios HTTP service config for Tomcat
+      copy:
+        dest: "/usr/local/nagios/etc/servers/tomcat_tcp.cfg"
+        mode: '0644'
+        content: |
+          define service{
+              use     generic-service
+              host_name   localhost
+              service_description   Tomcat TCP
+              check_command   check_tcp!-p 9090
+              notifications_enabled   1
+
+            }
+            
+
+    - name: Restart nagios
+      service:
+        name: nagios
+        state: restarted      

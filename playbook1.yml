@@ -1,0 +1,91 @@
+---
+- name: Setup
+  hosts: petclinic
+  tasks:
+    - name: copy the script
+      copy: src=./script.sh dest=/home/server mode=0755
+   
+    - name: copy helper script
+      copy: src=./install-java.sh dest=/home/server mode=0755
+   
+    - name: run script
+      become: yes
+      command: /home/server/script.sh
+
+
+    - name: add role
+      become: yes
+      become_user: pet-clinic
+      lineinfile:
+        path: /home/pet-clinic/tomcat/apache-tomcat-10.1.41/conf/tomcat-users.xml
+        line:
+          <role rolename="manager-gui"/>
+        state: present
+        insertbefore: '</tomcat-users>'  
+    
+    - name: add username and password
+      become: yes
+      become_user: pet-clinic
+      lineinfile:
+        path: /home/pet-clinic/tomcat/apache-tomcat-10.1.41/conf/tomcat-users.xml 
+        line: <user username="tomcat" password="tomcat" roles="manager-gui"/>
+        state: present
+        insertafter: '<role rolename="manager-gui"/>'
+      notify: Restart Tomcat
+    - name: change tomcat port to 9090
+      become: yes
+      become_user: pet-clinic
+      replace:
+        path: /home/pet-clinic/tomcat/apache-tomcat-10.1.41/conf/server.xml
+        regexp: 'port="8080"'
+        replace: 'port="9090"'  
+      notify: Restart Tomcat
+
+    - name: Add Jenkins repo
+      become: yes
+      get_url:
+        url: https://pkg.jenkins.io/redhat-stable/jenkins.repo
+        dest: /etc/yum.repos.d/jenkins.repo
+        mode: '0644'
+
+    - name: Import Jenkins GPG key
+      become: yes
+      rpm_key:
+        key: https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
+        state: present
+
+    - name: Install Jenkins
+      become: yes
+      yum:
+        name: jenkins
+        state: present
+    
+    - name: Start and enable jenkins
+      become: yes
+      become_user: pet-clinic
+      systemd:
+        name: jenkins
+        state: started
+        enabled: yes
+
+    - name: install maven
+      become: yes
+      dnf:
+        name: maven
+        state: present
+    
+    - name: install git
+      become: yes
+      dnf:
+        name: git
+        state: present      
+  
+  
+  handlers:
+    - name: Restart Tomcat
+      become: yes
+      become_user: pet-clinic
+      shell: >
+        /home/pet-clinic/tomcat/apache-tomcat-10.1.41/bin/shutdown.sh;
+        sleep 3;
+        /home/pet-clinic/tomcat/apache-tomcat-10.1.41/bin/startup.sh    

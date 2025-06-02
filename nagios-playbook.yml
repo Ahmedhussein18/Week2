@@ -1,0 +1,140 @@
+---
+- name: Install Nagios Core
+  hosts: petclinic
+  become: yes
+  vars:
+    nagios_user: "nagios"
+    nagios_group: "nagios"
+    nagios_core_url: "https://github.com/NagiosEnterprises/nagioscore/archive/refs/tags/nagios-4.4.6.tar.gz"
+    nagios_plugins_version: "2.4.6"
+    nagios_plugins_url: "https://nagios-plugins.org/download/nagios-plugins-{{ nagios_plugins_version }}.tar.gz"
+
+  tasks:
+    - name: Install dependencies (RHEL/CentOS based)
+      dnf:
+        name:
+          - gcc
+          - glibc
+          - glibc-common
+          - wget
+          - unzip
+          - httpd
+          - php
+          - gd
+          - gd-devel
+          - make
+          - net-snmp
+          - openssl-devel
+          - perl
+          - gettext
+          - autoconf
+          - automake
+          - curl
+        state: present
+    - name: Create nagios user and group
+      user:
+        name: "{{ nagios_user }}"
+        shell: /sbin/nologin
+        create_home: no
+
+    - name: Add Apache user to nagios group
+      user:
+        name: apache
+        groups: "{{ nagios_group }}"
+        append: yes
+
+    - name: Download Nagios Core
+      get_url:
+        url: "{{ nagios_core_url }}"
+        dest: /tmp/nagios.tar.gz
+
+    - name: Extract Nagios Core
+      unarchive:
+        src: /tmp/nagios.tar.gz
+        dest: /tmp
+        remote_src: yes
+
+    - name: Compile and install Nagios Core
+      shell: |
+        cd /tmp/nagioscore-*
+        ./configure --with-httpd-conf=/etc/httpd/conf.d
+        make all
+        make install
+        make install-init
+        make install-commandmode
+        make install-config
+        make install-webconf
+      args:
+        creates: /usr/local/nagios/bin/nagios
+
+    - name: Set Nagios web UI user
+      command: htpasswd -b -c /usr/local/nagios/etc/htpasswd.users nagiosadmin nagios123
+      args:
+        creates: /usr/local/nagios/etc/htpasswd.users
+
+    - name: Enable and start Apache & Nagios
+      service:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+      loop:
+        - httpd
+        - nagios
+
+    - name: Create temporary build directory
+      file:
+        path: /tmp/nagios-plugins
+        state: directory
+        mode: '0755'
+
+    - name: Download Nagios plugins
+      get_url:
+        url: "{{ nagios_plugins_url }}"
+        dest: /tmp/nagios-plugins/nagios-plugins.tar.gz
+
+    - name: Extract Nagios plugins
+      unarchive:
+        src: /tmp/nagios-plugins/nagios-plugins.tar.gz
+        dest: /tmp/nagios-plugins/
+        remote_src: yes
+
+    - name: Compile and install Nagios plugins
+      shell: |
+        cd /tmp/nagios-plugins/nagios-plugins-{{ nagios_plugins_version }}
+        ./configure --with-nagios-user=nagios --with-nagios-group=nagios
+        make
+        make install
+      args:
+        creates: /usr/local/nagios/libexec/check_http
+
+    - name: Clean up build directory
+      file:
+        path: /tmp/nagios-plugins
+        state: absent
+   
+    - name: Ensure Nagios servers directory exists
+      file:
+        path: /usr/local/nagios/etc/servers
+        state: directory
+        mode: '0755'
+
+    - name: Create Nagios HTTP service config for Tomcat
+      notify: Restart Nagios
+      copy:
+        dest: "/usr/local/nagios/etc/servers/tomcat_http.cfg"
+        mode: '0644'
+        content: |
+          define service{
+              use                 generic-service
+              host_name           localhost
+              service_description Tomcat HTTP
+              check_command       check_http!-p 9090 -u /spring-petclinic
+              notifications_enabled 1
+          }
+
+  handlers:
+    - name: Restart Nagios
+      service:
+        name: nagios
+        state: restarted
+          

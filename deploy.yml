@@ -1,0 +1,34 @@
+---
+- name: Deploy Petclinic to tomcat
+  hosts: petclinic
+  become: yes
+  become_user: pet-clinic
+  vars:
+     tomcat_home: "/home/pet-clinic/tomcat/apache-tomcat-10.1.41"
+     java_home: "/home/pet-clinic/java/jdk-17.0.12"
+  tasks: 
+    - name: Copy WAR
+      copy:
+        remote_src: yes
+        src: /var/lib/jenkins/workspace/Pet-clinic-cid-cd/target/spring-petclinic-3.4.0-SNAPSHOT.war
+        dest: /home/pet-clinic/tomcat/apache-tomcat-10.1.41/webapps/spring-petclinic.war
+        owner: pet-clinic
+        group: pet-clinic
+        mode: '0644'
+    - name: Stop Tomcat
+      shell: "{{ tomcat_home }}/bin/shutdown.sh"
+      register: shutdown_output
+      ignore_errors: true
+
+    - name: Start Tomcat
+      shell: "nohup {{ tomcat_home }}/bin/startup.sh &"
+      become: yes
+      become_user: pet-clinic
+      register: startup_result
+      args:
+        chdir: "{{ tomcat_home }}"  
+      environment:
+        JAVA_HOME: "{{ java_home }}"
+      
+    - debug:
+        var: startup_result.stdout_lines  
